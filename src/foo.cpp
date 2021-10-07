@@ -26,12 +26,22 @@ int main(int argc, char* args[]) {
         if (!loadMedia()) {
             printf("Failed to load media\n");
         } else {
-            // Apply image to surface
-            SDL_BlitSurface(gHelloWorld, NULL, gScreenSurface, NULL);
-            // update surface
-            SDL_UpdateWindowSurface(gWindow);
 
-            SDL_Delay(5000);
+            bool quit = false;
+            SDL_Event e;
+
+            while (!quit) {
+                while (SDL_PollEvent(&e) != 0) {
+                    if (e.type == SDL_QUIT) {
+                        quit = true;
+                    }
+                }
+                // Apply image to surface
+                SDL_BlitSurface(gHelloWorld, NULL, gScreenSurface, NULL);
+                // update surface
+                SDL_UpdateWindowSurface(gWindow);
+            }
+
         }
     }
 
