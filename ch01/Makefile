@@ -1,0 +1,8 @@
+OBJS = hello_SDL.cpp
+CC = g++
+COMPLIER_FLAGS = -w
+LINKER_FLAGS = -lSDL2
+OBJ_NAME = 01_hello_SDL
+
+all : $(OBJS)
+	$(CC) $(OBJS) $(COMPLIER_FLAGS) $(LINKER_FLAGS) -o $(OBJ_NAME)
