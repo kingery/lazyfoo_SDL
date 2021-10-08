@@ -30,6 +30,7 @@ SDL_Window* gWindow = NULL;
 SDL_Surface* gScreenSurface = NULL;
 SDL_Surface* gKeyPressSurfaces[kpsTOTAL];
 SDL_Surface* gCurrentSurface = NULL;
+SDL_Surface* gStretchedSurface = NULL;
 
 int main(int argc, char* args[]) {
     SDL_Window* window = NULL;
@@ -49,32 +50,17 @@ int main(int argc, char* args[]) {
                 while (SDL_PollEvent(&e) != 0) {
                     if (e.type == SDL_QUIT) {
                         quit = true;
-                    } else if (e.type == SDL_KEYDOWN) {
-                        switch( e.key.keysym.sym) {
-                            case SDLK_UP:
-                                gCurrentSurface = gKeyPressSurfaces[kpsUP];
-                                break;
-
-                            case SDLK_DOWN:
-                                gCurrentSurface = gKeyPressSurfaces[kpsDOWN];
-                                break;
-
-                            case SDLK_LEFT:
-                                gCurrentSurface = gKeyPressSurfaces[kpsLEFT];
-                                break;
-
-                            case SDLK_RIGHT:
-                                gCurrentSurface = gKeyPressSurfaces[kpsRIGHT];
-                                break;
-
-                            default:
-                                gCurrentSurface = gKeyPressSurfaces[kpsDEFAULT];
-                                break;
-                        }
                     }
                 }
+
+
+                SDL_Rect stretchRect;
+                stretchRect.x = 0;
+                stretchRect.y = 0;
+                stretchRect.w = SCREEN_WIDTH;
+                stretchRect.h = SCREEN_HEIGHT;
                 // Apply image to surface
-                SDL_BlitSurface(gCurrentSurface, NULL, gScreenSurface, NULL);
+                SDL_BlitScaled(gStretchedSurface, NULL, gScreenSurface, &stretchRect);
                 // update surface
                 SDL_UpdateWindowSurface(gWindow);
             }
@@ -117,7 +103,6 @@ bool init() {
 bool loadMedia() {
     bool success = true;
 
-
     gKeyPressSurfaces[kpsDEFAULT] = loadSurface("press.bmp"); 
     if (gKeyPressSurfaces[kpsDEFAULT] == NULL) {
         printf("Failed to load default image!\n");
@@ -146,6 +131,12 @@ bool loadMedia() {
         success = false;
     }
 
+    gStretchedSurface = loadSurface("stretch.bmp");
+    if (gStretchedSurface == NULL) {
+        printf("Failed to load stretching image!\n");
+        success = false;
+    }
+
     return success;
 }
 
@@ -160,10 +151,21 @@ void close() {
 }
 
 SDL_Surface* loadSurface(string path) {
+
+    // pointer to optimized surface
+    SDL_Surface* optimizedSurface = NULL;
+
     SDL_Surface* loadedSurface = SDL_LoadBMP(path.c_str());
     if (loadedSurface == NULL) {
         printf("Unable to load image %s! error: %s\n", path.c_str(), SDL_GetError());
+    } else {
+        optimizedSurface = SDL_ConvertSurface(loadedSurface, gScreenSurface->format, 0);
+        if (optimizedSurface == NULL) {
+            printf("Unable to optimize image %s! Error: %s\n", path.c_str(), SDL_GetError());    
+        }
+        // get rid of old loaded surface
+        SDL_FreeSurface(loadedSurface);
     }
 
-    return loadedSurface;
+    return optimizedSurface;
 }
