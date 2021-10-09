@@ -14,13 +14,13 @@ bool init();
 bool loadMedia();
 // frees media and shuts down SDL
 void close();
-// load individual image
-SDL_Surface* loadSurface(string path);
+// load an image as texture
+SDL_Texture* loadTexture(string path);
 
 // global variables :( will address later
 SDL_Window* gWindow = NULL;
-SDL_Surface* gScreenSurface = NULL;
-SDL_Surface* gPNGSurface = NULL;
+SDL_Renderer* gRenderer = NULL;
+SDL_Texture* gTexture = NULL;
 
 int main(int argc, char* args[]) {
     SDL_Window* window = NULL;
@@ -42,12 +42,15 @@ int main(int argc, char* args[]) {
                     }
                 }
 
-                // Apply image to surface
-                SDL_BlitScaled(gPNGSurface, NULL, gScreenSurface, NULL);
-                // update surface
-                SDL_UpdateWindowSurface(gWindow);
-            }
+                // clear screen
+                SDL_RenderClear(gRenderer);
 
+                // render texture to screen
+                SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
+
+                // update screen
+                SDL_RenderPresent(gRenderer);
+            }
         }
     }
 
@@ -76,13 +79,19 @@ bool init() {
             printf("SDL shit the bed during window creation :( error: %s\n", SDL_GetError());
             success = false;
         } else {
-            // init PNG loading
-            int imgFlags = IMG_INIT_PNG;
-            if (!(IMG_Init(imgFlags) & imgFlags)) {
-                printf("SDL_Image failed to init! Error: %s\n", IMG_GetError());
+            gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
+
+            if (gRenderer == NULL) {
+                printf("Renderer couldn't init :( error: %s\n", SDL_GetError());
                 success = false;
-            } else {
-                gScreenSurface = SDL_GetWindowSurface(gWindow);
+            } else { // renderer is a go!
+                SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
+                
+                int imgFlags = IMG_INIT_PNG;
+                if (!(IMG_Init(imgFlags) & imgFlags)) {
+                    printf("SDL_image didn't init :( error: %s\n", IMG_GetError());
+                    success = false;
+                }
             }
         }
     }
@@ -93,10 +102,10 @@ bool init() {
 bool loadMedia() {
     bool success = true;
 
-    // load PNG surface
-    gPNGSurface = loadSurface("loaded.png");
-    if (gPNGSurface == NULL) {
-        printf("Failed to load PNG surface!\n");
+    // load PNG texture
+    gTexture = loadTexture("assets/texture.png");
+    if (gTexture == NULL) {
+        printf("Failed to load PNG texture!\n");
         success = false;
     }
 
@@ -104,9 +113,11 @@ bool loadMedia() {
 }
 
 void close() {
-    SDL_FreeSurface(gPNGSurface);
-    gPNGSurface = NULL;
+    SDL_DestroyTexture(gTexture);
+    gTexture = NULL;
 
+    SDL_DestroyRenderer(gRenderer);
+    gRenderer = NULL;
     SDL_DestroyWindow(gWindow);
     gWindow = NULL;
 
@@ -114,25 +125,22 @@ void close() {
     SDL_Quit();
 }
 
-SDL_Surface* loadSurface(string path) {
+SDL_Texture* loadTexture(string path) {
+    SDL_Texture* newTexture = NULL;
 
-    // pointer to optimized surface
-    SDL_Surface* optimizedSurface = NULL;
-
-    // load image a specified path
-    //SDL_Surface* loadedSurface = SDL_LoadBMP(path.c_str());
     SDL_Surface* loadedSurface = IMG_Load(path.c_str());
 
     if (loadedSurface == NULL) {
-        printf("Unable to load image %s! error: %s\n", path.c_str(), IMG_GetError());
-    } else {
-        optimizedSurface = SDL_ConvertSurface(loadedSurface, gScreenSurface->format, 0);
-        if (optimizedSurface == NULL) {
-            printf("Unable to optimize image %s! Error: %s\n", path.c_str(), SDL_GetError());    
+        printf("Failed to load image %s :( error: %s\n", path.c_str(), IMG_GetError());
+    } else { // surface loaded! Time to create the texture
+        //
+        newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
+        if (newTexture == NULL) {
+            printf("Failed to create texture :( error:; %s\n", SDL_GetError());
         }
-        // get rid of old loaded surface
+
         SDL_FreeSurface(loadedSurface);
     }
 
-    return optimizedSurface;
+    return newTexture;
 }

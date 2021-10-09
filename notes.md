@@ -27,3 +27,14 @@
 - "blitting"
     - take a source surface and stamp a copy of it onto the destination surface
     - drawing happens to back buffer, need to SDL_UpdateWindowSurface to swap back/front buffers
+
+# SDL Textures
+
+- SDL can render a image as a texture
+- requires SDL_Renderer
+
+gotta make sure these concepts are clear:
+- window
+- surface
+- renderer
+- texture
