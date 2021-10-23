@@ -38,3 +38,17 @@ gotta make sure these concepts are clear:
 - surface
 - renderer
 - texture
+
+# Geometry rendering
+
+- Render basic geometric shapes without additional graphics
+- SDL_SetRenderDrawColor(R, G, B, Alpha -- "opacity")
+- origin of rendering is upper-left corner of screen
+    - x increases to the right
+    - y increases to the bottom
+- steps to render a rect
+    - declare the Rect (SDL_Rect)
+    - set the renderer color/opacity (SDL_SetRenderDrawColor)
+    - apply the shape to the renderer (SDL_RenderFillRect, SDL_RenderDrawRect)
+        - the color being drawn is a property of the SDL_Renderer object! 
+

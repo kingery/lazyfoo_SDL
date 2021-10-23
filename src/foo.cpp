@@ -43,10 +43,40 @@ int main(int argc, char* args[]) {
                 }
 
                 // clear screen
+                SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff); // clear with white backgrounkk
                 SDL_RenderClear(gRenderer);
 
-                // render texture to screen
-                SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
+                // render red-filler quad
+                SDL_Rect fillRect = {
+                    SCREEN_WIDTH / 4,
+                    SCREEN_HEIGHT / 4,
+                    SCREEN_WIDTH / 2,
+                    SCREEN_HEIGHT / 2
+                };
+
+                SDL_SetRenderDrawColor(gRenderer, 0xff, 0x00, 0x00, 0xff);
+                SDL_RenderFillRect(gRenderer, &fillRect); // filled-in rectangle
+
+                // draw green outlined box
+                SDL_Rect outlineRect = {
+                    SCREEN_WIDTH / 6,
+                    SCREEN_HEIGHT / 6,
+                    SCREEN_WIDTH * 2/3,
+                    SCREEN_HEIGHT * 2/3
+                };
+
+                SDL_SetRenderDrawColor(gRenderer, 0x00, 0xff, 0x00, 0xff);
+                SDL_RenderDrawRect(gRenderer, &outlineRect);
+
+                // draw a solid line (1 pixel)
+                SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0xff, 0xff);
+                SDL_RenderDrawLine(gRenderer, 0, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT / 2);
+
+                // draw dotten line
+                SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0, 0xff); // yellow
+                for(int i = 0; i < SCREEN_HEIGHT; i += 4) {
+                    SDL_RenderDrawPoint(gRenderer, SCREEN_WIDTH / 2, i); // renderer, x pos, y pos
+                }
 
                 // update screen
                 SDL_RenderPresent(gRenderer);
@@ -102,13 +132,7 @@ bool init() {
 bool loadMedia() {
     bool success = true;
 
-    // load PNG texture
-    gTexture = loadTexture("assets/texture.png");
-    if (gTexture == NULL) {
-        printf("Failed to load PNG texture!\n");
-        success = false;
-    }
-
+    // using geometry rendering. No media to load!
     return success;
 }
 
