@@ -15,6 +15,8 @@ class LTexture {
         bool loadFromFile(std::string path);
         void free();
         void setColor(Uint8 red, Uint8 green, Uint8 blue);
+        void setBlendMode(SDL_BlendMode blending);
+        void setAlpha(Uint8 alpha);
         void render(int x, int y, SDL_Rect* clip = NULL);
         int getWidth();
         int getHeight();
@@ -50,7 +52,6 @@ LTexture gBackgroundTexture;
 
 // modulated textures
 LTexture gModulatedTexture;
-
 
 LTexture::LTexture() {
     mTexture = NULL;
@@ -102,6 +103,14 @@ void LTexture::setColor(Uint8 red, Uint8 green, Uint8 blue) {
     SDL_SetTextureColorMod(mTexture, red, green, blue);
 }
 
+void LTexture::setBlendMode(SDL_BlendMode blending) {
+    SDL_SetTextureBlendMode(mTexture, blending);
+}
+
+void LTexture::setAlpha(Uint8 alpha) {
+    SDL_SetTextureAlphaMod(mTexture, alpha);
+}
+
 void LTexture::render(int x, int y, SDL_Rect* clip) {
     // create render quad of correct size in correct location
     SDL_Rect renderQuad = {x, y, mWidth, mHeight};
@@ -145,6 +154,8 @@ int main(int argc, char* args[]) {
             Uint8 g = 255;
             Uint8 b = 255;
 
+            Uint8 a = 255;
+
             int x_pos = 0;
             int y_pos = 0;
 
@@ -153,36 +164,20 @@ int main(int argc, char* args[]) {
                     if (e.type == SDL_QUIT) {
                         quit = true;
                     } else if (e.type == SDL_KEYDOWN) {
-                        switch (e.key.keysym.sym) {
-                            // increase red
-                            case SDLK_q:
-                            r += 32;
-                            break;
-
-                            // increase green
-                            case SDLK_w:
-                            g += 32;
-                            break;
-
-                            // increase blue
-                            case SDLK_e:
-                            b += 32;
-                            break;
-
-                            // decrease red
-                            case SDLK_a:
-                            r -= 32;
-                            break;
-
-                            // decrease green
-                            case SDLK_s:
-                            g -= 32;
-                            break;
-
-                            // decrease blue
-                            case SDLK_d:
-                            b -= 32;
-                            break;
+                        if (e.key.keysym.sym == SDLK_w) {
+                            // increase alpha
+                            if (a + 32 > 255) {
+                                a = 255;    
+                            } else {
+                                a += 32;
+                            }
+                        } else if (e.key.keysym.sym == SDLK_s) {
+                            // decrease alpha
+                            if (a - 32 < 0) {
+                                a = 0;
+                            } else {
+                                a -= 32;
+                            }
                         }
                     }
                 }
@@ -191,8 +186,11 @@ int main(int argc, char* args[]) {
                 SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
                 SDL_RenderClear(gRenderer);
 
+                // render background
+                gBackgroundTexture.render(0, 0);
+
                 // modulate and render texture
-                gModulatedTexture.setColor(r, g, b);
+                gModulatedTexture.setAlpha(a);
                 gModulatedTexture.render(0, 0);
 
                 // update screen
@@ -249,51 +247,18 @@ bool init() {
 bool loadMedia() {
     bool success = true;
 
-    // Load the foo
-    if (!gFooTexture.loadFromFile("assets/foo.png")) {
-        printf("Failed to load foo texture image\n");
-        success = false;
-    }
-
-    if (!gBackgroundTexture.loadFromFile("assets/background.png")) {
-        printf("Failed to load background texture image\n");
-        success = false;
-    }
-
-    // load modulated texture
-    if (!gModulatedTexture.loadFromFile("assets/colors.png")) {
-        printf("failed to load modulated texture :(\n");
-        success = false;
-    }
-
-    // load sprite sheet
-    if (!gSpriteSheetTexture.loadFromFile("assets/dots.png")) {
-        printf("failed to load sprite sheet texture :(\n");
+    // load front alpha texture
+    if (!gModulatedTexture.loadFromFile("assets/fadeout.png")) {
+        printf("failed to load front texture :(\n");
         success = false;
     } else {
-        //set top left sprite
-        gSpriteClips[0].x = 0;
-        gSpriteClips[0].y = 0;
-        gSpriteClips[0].w = 100;
-        gSpriteClips[0].h = 100;
+        gModulatedTexture.setBlendMode(SDL_BLENDMODE_BLEND);
+    }
 
-        //set top right sprite
-        gSpriteClips[1].x = 100;
-        gSpriteClips[1].y = 0;
-        gSpriteClips[1].w = 100;
-        gSpriteClips[1].h = 100;
-
-        //set bottom left
-        gSpriteClips[2].x = 0;
-        gSpriteClips[2].y = 100;
-        gSpriteClips[2].w = 100;
-        gSpriteClips[2].h = 100;
-
-        //bottom right
-        gSpriteClips[3].x = 100;
-        gSpriteClips[3].y = 100;
-        gSpriteClips[3].w = 100;
-        gSpriteClips[3].h = 100;
+    // load background texture
+    if (!gBackgroundTexture.loadFromFile("assets/fadein.png")) {
+        printf("failed to load background texture :(\n");
+        success = false;
     }
 
     return success;
