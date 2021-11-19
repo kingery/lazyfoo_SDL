@@ -18,6 +18,7 @@ class LTexture {
         void setBlendMode(SDL_BlendMode blending);
         void setAlpha(Uint8 alpha);
         void render(int x, int y, SDL_Rect* clip = NULL);
+        void render(int x, int y, SDL_Rect* clip = NULL, double angle = 0.0, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
         int getWidth();
         int getHeight();
 
@@ -46,6 +47,9 @@ SDL_Texture* gTexture = NULL;
 const int WALKING_ANIMATION_FRAMES = 4;
 SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
 LTexture gSpriteSheetTexture;
+
+// arrow for rotating/flipping
+LTexture gArrowTexture;
 
 // Scene textures
 LTexture gFooTexture;
@@ -127,6 +131,18 @@ void LTexture::render(int x, int y, SDL_Rect* clip) {
     SDL_RenderCopy(gRenderer, mTexture, clip, &renderQuad);
 }
 
+void LTexture::render(int x, int y, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip) {
+    SDL_Rect renderQuad = {x, y, mWidth, mHeight};
+
+    // set clip rendering dimensions
+    if (clip != NULL) {
+        renderQuad.w = clip->w;
+        renderQuad.h = clip->h;
+    }
+
+    SDL_RenderCopyEx(gRenderer, mTexture, clip, &renderQuad, angle, center, flip);
+}
+
 int LTexture::getWidth() {
     return mWidth;
 }
@@ -154,6 +170,9 @@ int main(int argc, char* args[]) {
             // current animation frame
             int frame = 0;
 
+            double degrees = 0;
+            SDL_RendererFlip flipType = SDL_FLIP_NONE;
+
             int x_pos = 0;
             int y_pos = 0;
 
@@ -161,6 +180,29 @@ int main(int argc, char* args[]) {
                 while (SDL_PollEvent(&e) != 0) {
                     if (e.type == SDL_QUIT) {
                         quit = true;
+                    } else if (e.type == SDL_KEYDOWN) {
+                        // key was pressed
+                        switch(e.key.keysym.sym) {
+                            case SDLK_a:
+                            degrees -= 15;
+                            break;
+
+                            case SDLK_d:
+                            degrees += 15;
+                            break;
+
+                            case SDLK_q:
+                            flipType = SDL_FLIP_HORIZONTAL;
+                            break;
+
+                            case SDLK_w:
+                            flipType = SDL_FLIP_NONE;
+                            break;
+
+                            case SDLK_e:
+                            flipType = SDL_FLIP_VERTICAL;
+                            break;
+                        }
                     }
                 }
 
@@ -168,18 +210,10 @@ int main(int argc, char* args[]) {
                 SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
                 SDL_RenderClear(gRenderer);
 
-                // render current frame
-                SDL_Rect* currentClip = &gSpriteClips[frame / 4];
-                gSpriteSheetTexture.render((SCREEN_WIDTH - currentClip->w) / 2, (SCREEN_HEIGHT - currentClip->h) / 2, currentClip);
-
+                // render arrow
+                gArrowTexture.render((SCREEN_WIDTH - gArrowTexture.getWidth()) / 2, (SCREEN_HEIGHT - gArrowTexture.getHeight()) / 2, NULL, degrees, NULL, flipType);
                 // update screen
                 SDL_RenderPresent(gRenderer);
-
-                ++frame;
-
-                if (frame / 4 >= WALKING_ANIMATION_FRAMES) {
-                    frame = 0;
-                }
             }
         }
     }
@@ -257,6 +291,12 @@ bool loadMedia() {
         gSpriteClips[3].y = 0;
         gSpriteClips[3].w = 64;
         gSpriteClips[3].h = 205;
+    }
+
+    // load arrow texture
+    if (!gArrowTexture.loadFromFile("assets/arrow.png")) {
+        printf("failed to load arrow texture :(\n");
+        success = false;
     }
 
     return success;
