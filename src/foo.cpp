@@ -1,9 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include <SDL2/SDL_tff.h>
 #include <stdio.h>
 #include <string>
-#include <sstream>
 
 using namespace std;
 
@@ -234,12 +232,6 @@ bool init() {
 bool loadMedia() {
     bool success = true;
 
-    // open font
-    gFont = TTF_OpenFont("assets/lazy.ttf");
-    if (gFont == NULL) {
-        printf("failed to load font :( error: %s\n", TTF_GetError());
-        success = false;
-    }
     // load sprite sheet texture
     if (!gSpriteSheetTexture.loadFromFile("assets/foosheet.png")) {
         printf("failed to load walking animation texture :(\n");
