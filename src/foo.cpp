@@ -14,6 +14,7 @@ class LTexture {
         ~LTexture();
         bool loadFromFile(std::string path);
         void free();
+        void setColor(Uint8 red, Uint8 green, Uint8 blue);
         void render(int x, int y, SDL_Rect* clip = NULL);
         int getWidth();
         int getHeight();
@@ -46,6 +47,9 @@ LTexture gSpriteSheetTexture;
 // Scene textures
 LTexture gFooTexture;
 LTexture gBackgroundTexture;
+
+// modulated textures
+LTexture gModulatedTexture;
 
 
 LTexture::LTexture() {
@@ -94,6 +98,10 @@ void LTexture::free() {
     }
 }
 
+void LTexture::setColor(Uint8 red, Uint8 green, Uint8 blue) {
+    SDL_SetTextureColorMod(mTexture, red, green, blue);
+}
+
 void LTexture::render(int x, int y, SDL_Rect* clip) {
     // create render quad of correct size in correct location
     SDL_Rect renderQuad = {x, y, mWidth, mHeight};
@@ -133,6 +141,10 @@ int main(int argc, char* args[]) {
             bool quit = false;
             SDL_Event e;
 
+            Uint8 r = 255;
+            Uint8 g = 255;
+            Uint8 b = 255;
+
             int x_pos = 0;
             int y_pos = 0;
 
@@ -140,6 +152,38 @@ int main(int argc, char* args[]) {
                 while (SDL_PollEvent(&e) != 0) {
                     if (e.type == SDL_QUIT) {
                         quit = true;
+                    } else if (e.type == SDL_KEYDOWN) {
+                        switch (e.key.keysym.sym) {
+                            // increase red
+                            case SDLK_q:
+                            r += 32;
+                            break;
+
+                            // increase green
+                            case SDLK_w:
+                            g += 32;
+                            break;
+
+                            // increase blue
+                            case SDLK_e:
+                            b += 32;
+                            break;
+
+                            // decrease red
+                            case SDLK_a:
+                            r -= 32;
+                            break;
+
+                            // decrease green
+                            case SDLK_s:
+                            g -= 32;
+                            break;
+
+                            // decrease blue
+                            case SDLK_d:
+                            b -= 32;
+                            break;
+                        }
                     }
                 }
 
@@ -147,18 +191,9 @@ int main(int argc, char* args[]) {
                 SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
                 SDL_RenderClear(gRenderer);
 
-                // render top left sprite
-                gSpriteSheetTexture.render(0, 0, &gSpriteClips[0]);
-
-                // top right sprite
-                gSpriteSheetTexture.render(SCREEN_WIDTH - gSpriteClips[1].w, 0, &gSpriteClips[1]);
-
-                // bottom left 
-                gSpriteSheetTexture.render(0, SCREEN_HEIGHT - gSpriteClips[2].h, &gSpriteClips[2]);
-
-                // bottorm right
-                gSpriteSheetTexture.render(SCREEN_WIDTH - gSpriteClips[3].w, SCREEN_HEIGHT - gSpriteClips[3].h, &gSpriteClips[3]);
-
+                // modulate and render texture
+                gModulatedTexture.setColor(r, g, b);
+                gModulatedTexture.render(0, 0);
 
                 // update screen
                 SDL_RenderPresent(gRenderer);
@@ -222,6 +257,12 @@ bool loadMedia() {
 
     if (!gBackgroundTexture.loadFromFile("assets/background.png")) {
         printf("Failed to load background texture image\n");
+        success = false;
+    }
+
+    // load modulated texture
+    if (!gModulatedTexture.loadFromFile("assets/colors.png")) {
+        printf("failed to load modulated texture :(\n");
         success = false;
     }
 
