@@ -1,7 +1,9 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_tff.h>
 #include <stdio.h>
 #include <string>
+#include <sstream>
 
 using namespace std;
 
@@ -42,8 +44,9 @@ SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 SDL_Texture* gTexture = NULL;
 
-// scene sprites
-SDL_Rect gSpriteClips[4];
+// walking animation 
+const int WALKING_ANIMATION_FRAMES = 4;
+SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
 LTexture gSpriteSheetTexture;
 
 // Scene textures
@@ -150,11 +153,8 @@ int main(int argc, char* args[]) {
             bool quit = false;
             SDL_Event e;
 
-            Uint8 r = 255;
-            Uint8 g = 255;
-            Uint8 b = 255;
-
-            Uint8 a = 255;
+            // current animation frame
+            int frame = 0;
 
             int x_pos = 0;
             int y_pos = 0;
@@ -163,22 +163,6 @@ int main(int argc, char* args[]) {
                 while (SDL_PollEvent(&e) != 0) {
                     if (e.type == SDL_QUIT) {
                         quit = true;
-                    } else if (e.type == SDL_KEYDOWN) {
-                        if (e.key.keysym.sym == SDLK_w) {
-                            // increase alpha
-                            if (a + 32 > 255) {
-                                a = 255;    
-                            } else {
-                                a += 32;
-                            }
-                        } else if (e.key.keysym.sym == SDLK_s) {
-                            // decrease alpha
-                            if (a - 32 < 0) {
-                                a = 0;
-                            } else {
-                                a -= 32;
-                            }
-                        }
                     }
                 }
 
@@ -186,15 +170,18 @@ int main(int argc, char* args[]) {
                 SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
                 SDL_RenderClear(gRenderer);
 
-                // render background
-                gBackgroundTexture.render(0, 0);
-
-                // modulate and render texture
-                gModulatedTexture.setAlpha(a);
-                gModulatedTexture.render(0, 0);
+                // render current frame
+                SDL_Rect* currentClip = &gSpriteClips[frame / 4];
+                gSpriteSheetTexture.render((SCREEN_WIDTH - currentClip->w) / 2, (SCREEN_HEIGHT - currentClip->h) / 2, currentClip);
 
                 // update screen
                 SDL_RenderPresent(gRenderer);
+
+                ++frame;
+
+                if (frame / 4 >= WALKING_ANIMATION_FRAMES) {
+                    frame = 0;
+                }
             }
         }
     }
@@ -224,7 +211,7 @@ bool init() {
             printf("SDL shit the bed during window creation :( error: %s\n", SDL_GetError());
             success = false;
         } else {
-            gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
+            gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
             if (gRenderer == NULL) {
                 printf("Renderer couldn't init :( error: %s\n", SDL_GetError());
@@ -247,18 +234,37 @@ bool init() {
 bool loadMedia() {
     bool success = true;
 
-    // load front alpha texture
-    if (!gModulatedTexture.loadFromFile("assets/fadeout.png")) {
-        printf("failed to load front texture :(\n");
+    // open font
+    gFont = TTF_OpenFont("assets/lazy.ttf");
+    if (gFont == NULL) {
+        printf("failed to load font :( error: %s\n", TTF_GetError());
+        success = false;
+    }
+    // load sprite sheet texture
+    if (!gSpriteSheetTexture.loadFromFile("assets/foosheet.png")) {
+        printf("failed to load walking animation texture :(\n");
         success = false;
     } else {
-        gModulatedTexture.setBlendMode(SDL_BLENDMODE_BLEND);
-    }
+        // set sprite clips
+        gSpriteClips[0].x = 0;
+        gSpriteClips[0].y = 0;
+        gSpriteClips[0].w = 64;
+        gSpriteClips[0].h = 205;
 
-    // load background texture
-    if (!gBackgroundTexture.loadFromFile("assets/fadein.png")) {
-        printf("failed to load background texture :(\n");
-        success = false;
+        gSpriteClips[1].x = 64;
+        gSpriteClips[1].y = 0;
+        gSpriteClips[1].w = 64;
+        gSpriteClips[1].h = 205;
+
+        gSpriteClips[2].x = 128;
+        gSpriteClips[2].y = 0;
+        gSpriteClips[2].w = 64;
+        gSpriteClips[2].h = 205;
+
+        gSpriteClips[3].x = 196;
+        gSpriteClips[3].y = 0;
+        gSpriteClips[3].w = 64;
+        gSpriteClips[3].h = 205;
     }
 
     return success;
