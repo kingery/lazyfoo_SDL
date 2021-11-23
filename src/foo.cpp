@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 #include <stdio.h>
 #include <string>
 
@@ -13,11 +14,11 @@ class LTexture {
         LTexture();
         ~LTexture();
         bool loadFromFile(std::string path);
+        bool loadFromRenderedText(std::string textureText, SDL_Color textColor);
         void free();
         void setColor(Uint8 red, Uint8 green, Uint8 blue);
         void setBlendMode(SDL_BlendMode blending);
         void setAlpha(Uint8 alpha);
-        void render(int x, int y, SDL_Rect* clip = NULL);
         void render(int x, int y, SDL_Rect* clip = NULL, double angle = 0.0, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
         int getWidth();
         int getHeight();
@@ -35,28 +36,13 @@ bool init();
 bool loadMedia();
 // frees media and shuts down SDL
 void close();
-// load an image as texture
-SDL_Texture* loadTexture(string path);
 
 // global variables :( will address later
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
-SDL_Texture* gTexture = NULL;
 
-// walking animation 
-const int WALKING_ANIMATION_FRAMES = 4;
-SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
-LTexture gSpriteSheetTexture;
-
-// arrow for rotating/flipping
-LTexture gArrowTexture;
-
-// Scene textures
-LTexture gFooTexture;
-LTexture gBackgroundTexture;
-
-// modulated textures
-LTexture gModulatedTexture;
+TTF_Font *gFont = NULL;
+LTexture gTextTexture;
 
 LTexture::LTexture() {
     mTexture = NULL;
@@ -96,6 +82,27 @@ bool LTexture::loadFromFile(std::string path) {
     return mTexture != NULL;
 }
 
+bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor) {
+    free();
+
+    SDL_Surface* textSurface = TTF_RenderText_Solid(gFont, textureText.c_str(), textColor);
+    if (textSurface == NULL) {
+        printf("unable to render text surface :( error: %s\n", TTF_GetError());
+    } else {
+        mTexture = SDL_CreateTextureFromSurface(gRenderer, textSurface);
+        if (mTexture == NULL) {
+            printf("unable to create texture from rendered text! error: %\n", SDL_GetError());
+        } else {
+            mWidth = textSurface->w;
+            mHeight = textSurface->h;
+        }
+
+        SDL_FreeSurface(textSurface);
+    }
+
+    return mTexture != NULL;
+}
+
 void LTexture::free() {
     if (mTexture != NULL) {
         SDL_DestroyTexture(mTexture);
@@ -114,21 +121,6 @@ void LTexture::setBlendMode(SDL_BlendMode blending) {
 
 void LTexture::setAlpha(Uint8 alpha) {
     SDL_SetTextureAlphaMod(mTexture, alpha);
-}
-
-void LTexture::render(int x, int y, SDL_Rect* clip) {
-    // create render quad of correct size in correct location
-    SDL_Rect renderQuad = {x, y, mWidth, mHeight};
-
-    // set clip rendering dimensions
-    if (clip != NULL) {
-        renderQuad.w = clip->w;
-        renderQuad.h = clip->h;
-    }
-
-    // passing in a SDL_Rect as source rectangle
-    // source rectangle defines which part of the texture to render
-    SDL_RenderCopy(gRenderer, mTexture, clip, &renderQuad);
 }
 
 void LTexture::render(int x, int y, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip) {
@@ -155,9 +147,6 @@ int main(int argc, char* args[]) {
     SDL_Window* window = NULL;
     SDL_Surface* screenSurface = NULL;
 
-    gFooTexture = LTexture();
-    gBackgroundTexture = LTexture();
-
     if (!init()) {
         printf("Failed initialization\n");
     } else {
@@ -167,42 +156,13 @@ int main(int argc, char* args[]) {
             bool quit = false;
             SDL_Event e;
 
-            // current animation frame
-            int frame = 0;
-
             double degrees = 0;
             SDL_RendererFlip flipType = SDL_FLIP_NONE;
-
-            int x_pos = 0;
-            int y_pos = 0;
 
             while (!quit) {
                 while (SDL_PollEvent(&e) != 0) {
                     if (e.type == SDL_QUIT) {
                         quit = true;
-                    } else if (e.type == SDL_KEYDOWN) {
-                        // key was pressed
-                        switch(e.key.keysym.sym) {
-                            case SDLK_a:
-                            degrees -= 15;
-                            break;
-
-                            case SDLK_d:
-                            degrees += 15;
-                            break;
-
-                            case SDLK_q:
-                            flipType = SDL_FLIP_HORIZONTAL;
-                            break;
-
-                            case SDLK_w:
-                            flipType = SDL_FLIP_NONE;
-                            break;
-
-                            case SDLK_e:
-                            flipType = SDL_FLIP_VERTICAL;
-                            break;
-                        }
                     }
                 }
 
@@ -210,8 +170,10 @@ int main(int argc, char* args[]) {
                 SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
                 SDL_RenderClear(gRenderer);
 
-                // render arrow
-                gArrowTexture.render((SCREEN_WIDTH - gArrowTexture.getWidth()) / 2, (SCREEN_HEIGHT - gArrowTexture.getHeight()) / 2, NULL, degrees, NULL, flipType);
+
+                // render current frame
+                gTextTexture.render((SCREEN_WIDTH - gTextTexture.getWidth()) / 2, (SCREEN_HEIGHT - gTextTexture.getHeight()) / 2);
+
                 // update screen
                 SDL_RenderPresent(gRenderer);
             }
@@ -256,6 +218,11 @@ bool init() {
                     printf("SDL_image didn't init :( error: %s\n", IMG_GetError());
                     success = false;
                 }
+
+                if (TTF_Init() == -1) {
+                    printf("SDL_tff could not initialize! error: %s\n", TTF_GetError());
+                    success = false;
+                }
             }
         }
     }
@@ -265,38 +232,17 @@ bool init() {
 
 bool loadMedia() {
     bool success = true;
-
-    // load sprite sheet texture
-    if (!gSpriteSheetTexture.loadFromFile("assets/foosheet.png")) {
-        printf("failed to load walking animation texture :(\n");
+    
+    gFont = TTF_OpenFont("assets/lazy.ttf", 28);
+    if (gFont == NULL) {
+        printf("Failed to load font :( error: %s\n", TTF_GetError());
         success = false;
     } else {
-        // set sprite clips
-        gSpriteClips[0].x = 0;
-        gSpriteClips[0].y = 0;
-        gSpriteClips[0].w = 64;
-        gSpriteClips[0].h = 205;
-
-        gSpriteClips[1].x = 64;
-        gSpriteClips[1].y = 0;
-        gSpriteClips[1].w = 64;
-        gSpriteClips[1].h = 205;
-
-        gSpriteClips[2].x = 128;
-        gSpriteClips[2].y = 0;
-        gSpriteClips[2].w = 64;
-        gSpriteClips[2].h = 205;
-
-        gSpriteClips[3].x = 196;
-        gSpriteClips[3].y = 0;
-        gSpriteClips[3].w = 64;
-        gSpriteClips[3].h = 205;
-    }
-
-    // load arrow texture
-    if (!gArrowTexture.loadFromFile("assets/arrow.png")) {
-        printf("failed to load arrow texture :(\n");
-        success = false;
+        SDL_Color textColor = {0, 0, 0};
+        if (!gTextTexture.loadFromRenderedText("This is the message, do you hear it?", textColor)) {
+            printf("filad to render text texture :(\n");
+            success = false;
+        }
     }
 
     return success;
@@ -304,8 +250,10 @@ bool loadMedia() {
 
 void close() {
     // free loaded images
-    gFooTexture.free();
-    gBackgroundTexture.free();
+    gTextTexture.free();
+
+    TTF_CloseFont(gFont);
+    gFont = NULL;
 
     // destroy window
     SDL_DestroyRenderer(gRenderer);
@@ -315,24 +263,4 @@ void close() {
 
     IMG_Quit();
     SDL_Quit();
-}
-
-SDL_Texture* loadTexture(string path) {
-    SDL_Texture* newTexture = NULL;
-
-    SDL_Surface* loadedSurface = IMG_Load(path.c_str());
-
-    if (loadedSurface == NULL) {
-        printf("Failed to load image %s :( error: %s\n", path.c_str(), IMG_GetError());
-    } else { // surface loaded! Time to create the texture
-        //
-        newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
-        if (newTexture == NULL) {
-            printf("Failed to create texture :( error:; %s\n", SDL_GetError());
-        }
-
-        SDL_FreeSurface(loadedSurface);
-    }
-
-    return newTexture;
 }

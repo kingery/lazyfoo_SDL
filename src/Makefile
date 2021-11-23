@@ -1,7 +1,7 @@
-OBJS = foo.cpp 
+OBJS = foo.cpp
 CC = g++
 COMPLIER_FLAGS = -w
-LINKER_FLAGS = -lSDL2 -lSDL2_image
+LINKER_FLAGS = -lSDL2 -lSDL2_image -lSDL2_ttf
 OBJ_NAME = ../build/foo
 
 all : $(OBJS)
