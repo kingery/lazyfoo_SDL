@@ -233,7 +233,7 @@ bool init() {
 bool loadMedia() {
     bool success = true;
     
-    gFont = TTF_OpenFont("assets/lazy.ttf", 28);
+    gFont = TTF_OpenFont("src/assets/lazy.ttf", 28);
     if (gFont == NULL) {
         printf("Failed to load font :( error: %s\n", TTF_GetError());
         success = false;
