@@ -41,6 +41,7 @@ bool LTexture::loadFromFile(std::string path, SDL_Renderer* renderer) {
     return mTexture != NULL;
 }
 
+#if defined(SDL_TTF_MAJOR_VERSION)
 bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor, TTF_Font* font, SDL_Renderer* renderer) {
     free();
 
@@ -61,6 +62,7 @@ bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor
 
     return mTexture != NULL;
 }
+#endif
 
 void LTexture::free() {
     if (mTexture != NULL) {

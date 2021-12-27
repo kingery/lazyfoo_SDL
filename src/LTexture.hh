@@ -11,8 +11,12 @@ class LTexture
         LTexture();
         ~LTexture();
         bool loadFromFile(std::string path, SDL_Renderer* renderer);
+		
+		#if defined(SDL_TTF_MAJOR_VERSION)
         bool loadFromRenderedText(std::string textureText, SDL_Color textColor, TTF_Font* font, SDL_Renderer* renderer);
-        void free();
+        #endif
+		
+		void free();
         void setColor(Uint8 red, Uint8 green, Uint8 blue);
         void setBlendMode(SDL_BlendMode blending);
         void setAlpha(Uint8 alpha);
