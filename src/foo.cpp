@@ -3,37 +3,19 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
 #include <string>
+#include "LTexture.hh"
 
 using namespace std;
 
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
-class LTexture {
-    public:
-        LTexture();
-        ~LTexture();
-        bool loadFromFile(std::string path);
-        bool loadFromRenderedText(std::string textureText, SDL_Color textColor);
-        void free();
-        void setColor(Uint8 red, Uint8 green, Uint8 blue);
-        void setBlendMode(SDL_BlendMode blending);
-        void setAlpha(Uint8 alpha);
-        void render(int x, int y, SDL_Rect* clip = NULL, double angle = 0.0, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
-        int getWidth();
-        int getHeight();
-
-    private:
-        SDL_Texture* mTexture;
-
-        int mHeight;
-        int mWidth;
-};
-
 // Start SDL and create window
 bool init();
 // loads media
 bool loadMedia();
+// execute game loop
+void runGame();
 // frees media and shuts down SDL
 void close();
 
@@ -43,105 +25,6 @@ SDL_Renderer* gRenderer = NULL;
 
 TTF_Font *gFont = NULL;
 LTexture gTextTexture;
-
-LTexture::LTexture() {
-    mTexture = NULL;
-    mWidth = 0;
-    mHeight = 0;
-}
-
-LTexture::~LTexture() {
-    free();
-}
-
-bool LTexture::loadFromFile(std::string path) {
-    free(); // clear out pre-existing texture
-
-    SDL_Texture* newTexture = NULL;
-
-    SDL_Surface* loadedSurface = IMG_Load(path.c_str());
-    if (loadedSurface == NULL) {
-        printf("Unable to load image %s. SDL_image error: %s\n", path.c_str(), IMG_GetError());
-    } else {
-        // color key the image
-        SDL_SetColorKey(loadedSurface, SDL_TRUE, SDL_MapRGB(loadedSurface->format, 0, 0xff, 0xff));
-        // create texture from surface
-        newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
-        if (newTexture == NULL) {
-            printf("unable to create texture from %s. Error: %s\n", path.c_str(), SDL_GetError());
-        } else {
-            // successfully loaded
-            mWidth = loadedSurface->w;
-            mHeight = loadedSurface->h;
-        }
-
-        SDL_FreeSurface(loadedSurface);
-    }
-
-    mTexture = newTexture;
-    return mTexture != NULL;
-}
-
-bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor) {
-    free();
-
-    SDL_Surface* textSurface = TTF_RenderText_Solid(gFont, textureText.c_str(), textColor);
-    if (textSurface == NULL) {
-        printf("unable to render text surface :( error: %s\n", TTF_GetError());
-    } else {
-        mTexture = SDL_CreateTextureFromSurface(gRenderer, textSurface);
-        if (mTexture == NULL) {
-            printf("unable to create texture from rendered text! error: %\n", SDL_GetError());
-        } else {
-            mWidth = textSurface->w;
-            mHeight = textSurface->h;
-        }
-
-        SDL_FreeSurface(textSurface);
-    }
-
-    return mTexture != NULL;
-}
-
-void LTexture::free() {
-    if (mTexture != NULL) {
-        SDL_DestroyTexture(mTexture);
-        mWidth = 0;
-        mHeight = 0;
-    }
-}
-
-void LTexture::setColor(Uint8 red, Uint8 green, Uint8 blue) {
-    SDL_SetTextureColorMod(mTexture, red, green, blue);
-}
-
-void LTexture::setBlendMode(SDL_BlendMode blending) {
-    SDL_SetTextureBlendMode(mTexture, blending);
-}
-
-void LTexture::setAlpha(Uint8 alpha) {
-    SDL_SetTextureAlphaMod(mTexture, alpha);
-}
-
-void LTexture::render(int x, int y, SDL_Rect* clip, double angle, SDL_Point* center, SDL_RendererFlip flip) {
-    SDL_Rect renderQuad = {x, y, mWidth, mHeight};
-
-    // set clip rendering dimensions
-    if (clip != NULL) {
-        renderQuad.w = clip->w;
-        renderQuad.h = clip->h;
-    }
-
-    SDL_RenderCopyEx(gRenderer, mTexture, clip, &renderQuad, angle, center, flip);
-}
-
-int LTexture::getWidth() {
-    return mWidth;
-}
-
-int LTexture::getHeight() {
-    return mHeight;
-}
 
 int main(int argc, char* args[]) {
     SDL_Window* window = NULL;
@@ -153,30 +36,7 @@ int main(int argc, char* args[]) {
         if (!loadMedia()) {
             printf("Failed to load media\n");
         } else {
-            bool quit = false;
-            SDL_Event e;
-
-            double degrees = 0;
-            SDL_RendererFlip flipType = SDL_FLIP_NONE;
-
-            while (!quit) {
-                while (SDL_PollEvent(&e) != 0) {
-                    if (e.type == SDL_QUIT) {
-                        quit = true;
-                    }
-                }
-
-                //clear screen
-                SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
-                SDL_RenderClear(gRenderer);
-
-
-                // render current frame
-                gTextTexture.render((SCREEN_WIDTH - gTextTexture.getWidth()) / 2, (SCREEN_HEIGHT - gTextTexture.getHeight()) / 2);
-
-                // update screen
-                SDL_RenderPresent(gRenderer);
-            }
+			runGame();
         }
     }
 
@@ -239,13 +99,39 @@ bool loadMedia() {
         success = false;
     } else {
         SDL_Color textColor = {0, 0, 0};
-        if (!gTextTexture.loadFromRenderedText("This is the message, do you hear it?", textColor)) {
+        if (!gTextTexture.loadFromRenderedText("Rendered from text!", textColor, gFont, gRenderer)) {
             printf("filad to render text texture :(\n");
             success = false;
         }
     }
 
     return success;
+}
+
+void runGame() {
+	bool quit = false;
+	SDL_Event e;
+
+	double degrees = 0;
+	SDL_RendererFlip flipType = SDL_FLIP_NONE;
+
+	while (!quit) {
+		while (SDL_PollEvent(&e) != 0) {
+			if (e.type == SDL_QUIT) {
+				quit = true;
+			}
+		}
+
+		//clear screen
+		SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
+		SDL_RenderClear(gRenderer);
+
+		// render current frame
+		gTextTexture.render((SCREEN_WIDTH - gTextTexture.getWidth()) / 2, (SCREEN_HEIGHT - gTextTexture.getHeight()) / 2, gRenderer);
+
+		// update screen
+		SDL_RenderPresent(gRenderer);
+	}
 }
 
 void close() {
