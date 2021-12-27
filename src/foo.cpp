@@ -23,9 +23,13 @@ void close();
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 
-TTF_Font *gFont = NULL;
-LTexture gTextTexture;
 LTexture gButtonSpriteSheetTexture;
+
+LTexture gUpTexture;
+LTexture gDownTexture;
+LTexture gLeftTexture;
+LTexture gRightTexture;
+LTexture gPressTexture;
 
 const int BUTTON_WIDTH = 300;
 const int BUTTON_HEIGHT = 200;
@@ -182,25 +186,32 @@ bool init() {
 bool loadMedia() {
     bool success = true;
     
-    // load sprite sheets
-	if (!gButtonSpriteSheetTexture.loadFromFile("src/assets/button.png", gRenderer)) {
-		printf("failed to load button sprite sheet texture\n");
+    // load textures
+	if (!gUpTexture.loadFromFile("src/assets/up.bmp", gRenderer)) {
+		printf("failed to load up texture\n");
 		success = false;
-	} else {
-		// set sprites
-		for (int i = 0; i < BUTTON_SPRITE_TOTAL; ++i) {
-			gSpriteClips[i].x = 0;
-			gSpriteClips[i].y = i * 200;
-			gSpriteClips[i].h = BUTTON_HEIGHT;
-			gSpriteClips[i].w = BUTTON_WIDTH;
-		}
-		
-		// set buttons in corners
-		gButtons[0].setPosition(0,0);
-		gButtons[1].setPosition(SCREEN_WIDTH - BUTTON_WIDTH, 0);
-		gButtons[2].setPosition(0, SCREEN_HEIGHT - BUTTON_HEIGHT);
-		gButtons[3].setPosition(SCREEN_WIDTH - BUTTON_WIDTH, SCREEN_HEIGHT - BUTTON_HEIGHT);
 	}
+	
+	if (!gDownTexture.loadFromFile("src/assets/down.bmp", gRenderer)) {
+		printf("failed to load down texture\n");
+		success = false;
+	}
+	
+	if (!gLeftTexture.loadFromFile("src/assets/left.bmp", gRenderer)) {
+		printf("failed to load left texture\n");
+		success = false;
+	}
+	
+	if (!gRightTexture.loadFromFile("src/assets/right.bmp", gRenderer)) {
+		printf("failed to load right texture\n");
+		success = false;
+	}
+	
+	if (!gPressTexture.loadFromFile("src/assets/press.bmp", gRenderer)) {
+		printf("failed to load press texture\n");
+		success = false;
+	}
+	
     return success;
 }
 
@@ -208,19 +219,28 @@ void runGame() {
 	bool quit = false;
 	SDL_Event e;
 
-	double degrees = 0;
-	SDL_RendererFlip flipType = SDL_FLIP_NONE;
-
+	LTexture* currentTexture = NULL;
+	
 	while (!quit) {
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_QUIT) {
 				quit = true;
 			}
-			
-			// handle button events
-			for (int i = 0; i < TOTAL_BUTTONS; ++i) {
-				gButtons[i].handleEvent(&e);
-			}
+		}
+
+		// Set texture based on key state
+		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
+
+		if (currentKeyStates[SDL_SCANCODE_UP]) {
+			currentTexture = &gUpTexture;
+		} else if (currentKeyStates[SDL_SCANCODE_DOWN]) {
+			currentTexture = &gDownTexture;
+		} else if (currentKeyStates[SDL_SCANCODE_LEFT]) {
+			currentTexture = &gLeftTexture;
+		} else if (currentKeyStates[SDL_SCANCODE_RIGHT]) {
+			currentTexture = &gRightTexture;
+		} else {
+			currentTexture = &gPressTexture;
 		}
 
 		//clear screen
@@ -228,10 +248,7 @@ void runGame() {
 		SDL_RenderClear(gRenderer);
 
 		// render current frame
-		// render buttons
-		for (int i = 0; i < TOTAL_BUTTONS; ++i) {
-			gButtons[i].render();
-		}
+		currentTexture->render(0, 0, gRenderer);
 
 		// update screen
 		SDL_RenderPresent(gRenderer);
@@ -240,10 +257,11 @@ void runGame() {
 
 void close() {
     // free loaded images
-    gTextTexture.free();
-
-    TTF_CloseFont(gFont);
-    gFont = NULL;
+	gUpTexture.free();
+	gDownTexture.free();
+	gLeftTexture.free();
+	gRightTexture.free();
+	gPressTexture.free();
 
     // destroy window
     SDL_DestroyRenderer(gRenderer);
