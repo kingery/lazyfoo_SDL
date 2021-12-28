@@ -3,7 +3,9 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
 #include <string>
+#include <sstream>
 #include "LTexture.hh"
+#include "LTimer.hh"
 
 using namespace std;
 
@@ -25,11 +27,11 @@ SDL_Renderer* gRenderer = NULL;
 
 LTexture gButtonSpriteSheetTexture;
 
-LTexture gUpTexture;
-LTexture gDownTexture;
-LTexture gLeftTexture;
-LTexture gRightTexture;
-LTexture gPressTexture;
+LTexture gStartPromptTexture;
+LTexture gPausePromptTexture;
+LTexture gTimeTextTexture;
+
+TTF_Font *gFont;
 
 const int BUTTON_WIDTH = 300;
 const int BUTTON_HEIGHT = 200;
@@ -186,30 +188,25 @@ bool init() {
 bool loadMedia() {
     bool success = true;
     
-    // load textures
-	if (!gUpTexture.loadFromFile("src/assets/up.bmp", gRenderer)) {
-		printf("failed to load up texture\n");
+	// load the font
+	gFont = TTF_OpenFont("src/assets/lazy.ttf", 28);
+	if (gFont == NULL) {
+		printf("Failed to load font :( SDL_ttf error: %s\n", TTF_GetError());
 		success = false;
-	}
-	
-	if (!gDownTexture.loadFromFile("src/assets/down.bmp", gRenderer)) {
-		printf("failed to load down texture\n");
-		success = false;
-	}
-	
-	if (!gLeftTexture.loadFromFile("src/assets/left.bmp", gRenderer)) {
-		printf("failed to load left texture\n");
-		success = false;
-	}
-	
-	if (!gRightTexture.loadFromFile("src/assets/right.bmp", gRenderer)) {
-		printf("failed to load right texture\n");
-		success = false;
-	}
-	
-	if (!gPressTexture.loadFromFile("src/assets/press.bmp", gRenderer)) {
-		printf("failed to load press texture\n");
-		success = false;
+	} else {
+		// Set font color
+		SDL_Color textColor = {0, 0, 0, 0xff};
+		
+		// load prompt textures
+		if (!gStartPromptTexture.loadFromRenderedText("press 's' to start/stop timer :)", textColor, gFont, gRenderer)) {
+			printf("failed to load start prompt texture :(\n");
+			success = false;
+		}
+		
+		if (!gPausePromptTexture.loadFromRenderedText("press 'p' to pause/unpause timer :)", textColor, gFont, gRenderer)) {
+			printf("failed to load pause prompt texture :(\n");
+			success = false;
+		}
 	}
 	
     return success;
@@ -219,28 +216,41 @@ void runGame() {
 	bool quit = false;
 	SDL_Event e;
 
-	LTexture* currentTexture = NULL;
+	SDL_Color textColor = {0, 0, 0, 0xff};
+	LTimer timer;
+	
+	std::stringstream timeText;
 	
 	while (!quit) {
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_QUIT) {
 				quit = true;
+			} else if (e.type == SDL_KEYDOWN) {
+				if (e.key.keysym.sym == SDLK_s) {
+					// start/stop
+					if (timer.isStarted()) {
+						timer.stop();
+					} else {
+						timer.start();
+					}
+				} else if (e.key.keysym.sym == SDLK_p) {
+					// pause/unpause
+					if (timer.isPaused()) {
+						timer.unpause();
+					} else {
+						timer.pause();
+					}
+				}
 			}
 		}
-
-		// Set texture based on key state
-		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
-
-		if (currentKeyStates[SDL_SCANCODE_UP]) {
-			currentTexture = &gUpTexture;
-		} else if (currentKeyStates[SDL_SCANCODE_DOWN]) {
-			currentTexture = &gDownTexture;
-		} else if (currentKeyStates[SDL_SCANCODE_LEFT]) {
-			currentTexture = &gLeftTexture;
-		} else if (currentKeyStates[SDL_SCANCODE_RIGHT]) {
-			currentTexture = &gRightTexture;
-		} else {
-			currentTexture = &gPressTexture;
+		
+		// Set timer text
+		timeText.str("");
+		timeText << "Seconds since start time: " << (timer.getTicks() / 1000.f);
+		
+		// render text
+		if (!gTimeTextTexture.loadFromRenderedText(timeText.str().c_str(), textColor, gFont, gRenderer)) {
+			printf("Unable to render time texture :(\n");
 		}
 
 		//clear screen
@@ -248,7 +258,9 @@ void runGame() {
 		SDL_RenderClear(gRenderer);
 
 		// render current frame
-		currentTexture->render(0, 0, gRenderer);
+		gStartPromptTexture.render((SCREEN_WIDTH - gStartPromptTexture.getWidth()) / 2, 0, gRenderer);
+		gPausePromptTexture.render((SCREEN_WIDTH - gPausePromptTexture.getWidth()) / 2, gStartPromptTexture.getHeight(), gRenderer);
+		gTimeTextTexture.render((SCREEN_WIDTH - gTimeTextTexture.getWidth()) / 2, (SCREEN_HEIGHT - gTimeTextTexture.getHeight()) / 2, gRenderer);
 
 		// update screen
 		SDL_RenderPresent(gRenderer);
@@ -257,11 +269,12 @@ void runGame() {
 
 void close() {
     // free loaded images
-	gUpTexture.free();
-	gDownTexture.free();
-	gLeftTexture.free();
-	gRightTexture.free();
-	gPressTexture.free();
+	gStartPromptTexture.free();
+	gPausePromptTexture.free();
+	gTimeTextTexture.free();
+	
+	TTF_CloseFont(gFont);
+	gFont = NULL;
 
     // destroy window
     SDL_DestroyRenderer(gRenderer);

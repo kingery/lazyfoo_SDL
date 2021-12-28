@@ -1,5 +1,5 @@
-#ifndef LTEXTURE_HH
-#define LTEXTURE_HH
+#ifndef __LTEXTURE_HH
+#define __LTEXTURE_HH
 
 #include <string>
 #include <SDL2/SDL.h>
