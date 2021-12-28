@@ -221,32 +221,24 @@ void runGame() {
 	
 	std::stringstream timeText;
 	
+	int frames = 0;
+	timer.start();
+	
 	while (!quit) {
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_QUIT) {
 				quit = true;
-			} else if (e.type == SDL_KEYDOWN) {
-				if (e.key.keysym.sym == SDLK_s) {
-					// start/stop
-					if (timer.isStarted()) {
-						timer.stop();
-					} else {
-						timer.start();
-					}
-				} else if (e.key.keysym.sym == SDLK_p) {
-					// pause/unpause
-					if (timer.isPaused()) {
-						timer.unpause();
-					} else {
-						timer.pause();
-					}
-				}
 			}
+		}
+		
+		float avgFPS = frames / (timer.getTicks() / 1000.f);
+		if (avgFPS > 2000000) {
+			avgFPS = 0;
 		}
 		
 		// Set timer text
 		timeText.str("");
-		timeText << "Seconds since start time: " << (timer.getTicks() / 1000.f);
+		timeText << "Average FPS: " << avgFPS;
 		
 		// render text
 		if (!gTimeTextTexture.loadFromRenderedText(timeText.str().c_str(), textColor, gFont, gRenderer)) {
@@ -258,12 +250,11 @@ void runGame() {
 		SDL_RenderClear(gRenderer);
 
 		// render current frame
-		gStartPromptTexture.render((SCREEN_WIDTH - gStartPromptTexture.getWidth()) / 2, 0, gRenderer);
-		gPausePromptTexture.render((SCREEN_WIDTH - gPausePromptTexture.getWidth()) / 2, gStartPromptTexture.getHeight(), gRenderer);
 		gTimeTextTexture.render((SCREEN_WIDTH - gTimeTextTexture.getWidth()) / 2, (SCREEN_HEIGHT - gTimeTextTexture.getHeight()) / 2, gRenderer);
 
 		// update screen
 		SDL_RenderPresent(gRenderer);
+		frames++;
 	}
 }
 
