@@ -112,6 +112,13 @@ void runGame() {
 
 	Dot dot = Dot();
 	
+	// the wall
+	SDL_Rect wall;
+	wall.x = 300;
+	wall.y = 40;
+	wall.w = 40;
+	wall.h = 400;
+	
 	while (!quit) {
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_QUIT) {
@@ -121,12 +128,16 @@ void runGame() {
 			dot.handleEvent(e);
 		}
 		
-		dot.move(SCREEN_WIDTH, SCREEN_HEIGHT);
+		dot.move(wall, SCREEN_WIDTH, SCREEN_HEIGHT);
 	
 		//clear screen
 		SDL_SetRenderDrawColor(gRenderer, 0xff, 0xff, 0xff, 0xff);
 		SDL_RenderClear(gRenderer);
 
+		// render wall
+		SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, 0xff);
+		SDL_RenderDrawRect(gRenderer, &wall);
+		
 		// render dot
 		gDotTexture.render(dot.getXpos(), dot.getYpos(), gRenderer);
 		

@@ -17,7 +17,7 @@ class Dot
 		
 		void handleEvent(SDL_Event& e);
 		
-		void move(int maxXpos, int maxYpos);
+		void move(SDL_Rect& wall, int maxXpos, int maxYpos);
 		
 		void render(LTexture texture, SDL_Renderer* renderer);
 		
@@ -29,6 +29,10 @@ class Dot
 		int mPosX, mPosY;
 		
 		int mVelX, mVelY;
+		
+		SDL_Rect mCollider;
+		
+		bool checkCollision(SDL_Rect& wall);
 };
 
 #endif
